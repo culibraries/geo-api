@@ -135,6 +135,7 @@ class fileDataUploadView(APIView):
                         local_file = "%s/%s" % (uploadDirectory,filename)
                         self.handle_file_upload(request.FILES[key],local_file)
                         result[key]=local_file
+                        result['callback']=callback
                         results.append(result)
                 #Request task
                 #task_name = "etagq.tasks.tasks.etagDataUpload"
