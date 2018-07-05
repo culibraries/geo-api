@@ -57,8 +57,8 @@ class UserProfile(APIView):
         serializer = self.serializer_class(data,context={'request':request})
         tok = Token.objects.get_or_create(user=self.request.user)
         rdata = serializer.data
-        rdata['name'] = data.get_full_name() 
-        rdata['gravator_url']="{0}://www.gravatar.com/avatar/{1}".format(request.scheme,md5(rdata['email'].strip(' \t\n\r')).hexdigest()) 
+        rdata['name'] = data.get_full_name()
+        rdata['gravator_url']="{0}://www.gravatar.com/avatar/{1}".format(request.scheme,md5(rdata['email'].strip(' \t\n\r')).hexdigest())
         rdata['auth-token']= str(tok[0])
         return Response(rdata)
     def post(self,request,format=None):
@@ -71,7 +71,7 @@ class UserProfile(APIView):
             return Response(data)
         auth_tok  = request.DATA.get('auth-token', None)
         if str(auth_tok).lower()=="update":
-            tok = Token.objects.get(user=user)    
+            tok = Token.objects.get(user=user)
             tok.delete()
             tok = Token.objects.get_or_create(user=self.request.user)
             data = {"auth-token":str(tok[0])}
@@ -110,30 +110,32 @@ class fileDataUploadView(APIView):
         parser_classes = (FileUploadParser,)
         renderer_classes = (JSONRenderer,)
 
-        def post(self, request, uploadDirectory="/data/file_upload",format=None):
+        def post(self, request, uploadDirectory="/data/file_upload",format=None,callback=None):
                 #Get Token for task submission
                 #tok = Token.objects.get_or_create(user=self.request.user)
-                #headers = {'Authorization':'Token {0}'.format(str(tok[0])),'Content-Type':'application/json'} 
+                #headers = {'Authorization':'Token {0}'.format(str(tok[0])),'Content-Type':'application/json'}
                 #check if uploadDirectory exists
                 if not os.path.isdir(uploadDirectory):
                     os.makedirs(uploadDirectory)
                 result={} #'var':dir(request),'fpath':request.build_absolute_uri().split('/')}
                 local_file=""
-                #reader_id = request.DATA.get("reader_id")
+                print("CALLBACK: ",callback)
+                callback = request.DATA.get("callback")
+                print("CALLBACK: ",callback)
                 #public_id=  request.DATA.get("myCheck")
                 #if public_id != '1':
-		#				public_id=False
+		        #				public_id=False
                 #if public_id == '1':
-		#			public_id=True
+		        #			public_id=True
                 #result={"reader_id":reader_id,"public_id":public_id}
                 #return Response(result)
-		results=[]
+                results=[]
                 for key,value in request.FILES.iteritems():
                         filename= value.name
                         local_file = "%s/%s" % (uploadDirectory,filename)
                         self.handle_file_upload(request.FILES[key],local_file)
                         result[key]=local_file
-			results.append(result)
+                        results.append(result)
                 #Request task
                 #task_name = "etagq.tasks.tasks.etagDataUpload"
                 #payload={"function": task_name,"queue": "celery","args":[reader_id,local_file,str(tok[0]),public_id],"kwargs":{},"tags":[]}
