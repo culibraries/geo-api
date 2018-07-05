@@ -1,5 +1,6 @@
 __author__ = 'mstacy'
 from rest_framework.renderers import BrowsableAPIRenderer, JSONRenderer #, #JSONPRenderer
+from rest_framework_csv.renderers import CSVRenderer
 from api.encoder import JSONEncoder
 
 class DataBrowsableAPIRenderer(BrowsableAPIRenderer):
@@ -58,6 +59,13 @@ class mongoJSONPRenderer(mongoJSONRenderer):
         return callback.encode(self.charset) + b'(' + json + b');'
 
 
+class mongoCSVRenderer (CSVRenderer):
+    results_field = 'results'
+
+    def render(self, data, *args, **kwargs):
+        if not isinstance(data, list):
+            data = data.get(self.results_field, [])
+        return super(mongoCSVRenderer, self).render(data, *args, **kwargs)
 
 
 #class mongoJSONPRenderer(JSONPRenderer):
