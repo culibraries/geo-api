@@ -1,7 +1,7 @@
 from django.conf.urls import patterns, include, url
 from django.contrib import admin
 from django.contrib.auth.models import Permission
-from api.views import APIRoot, UserProfile #, UserView
+from api.views import APIRoot, UserProfile, fileDataUploadView  #, UserView
 #from rest_framework import routers
 
 try:
@@ -30,5 +30,6 @@ urlpatterns = patterns('',
     # User Profile
     url(r'^user/',UserProfile.as_view(),name='user-list'),
     url(r'^api-auth/', include('rest_framework.urls', namespace='rest_framework')),
+    url(r'^upload/',fileDataUploadView.as_view(), name='upload'),
 
 )

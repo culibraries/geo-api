@@ -10,9 +10,13 @@ from rest_framework.permissions import IsAuthenticated
 #from .models import AuthtokenToken, AuthUser
 from django.contrib.auth.decorators import login_required
 from hashlib import md5
+import os
 #from rest_framework import viewsets
 #from rest_framework.permissions import AllowAny
 #from .permissions import IsStaffOrTargetUser
+from rest_framework.parsers import JSONParser,MultiPartParser,FormParser,FileUploadParser
+from rest_framework.renderers import BrowsableAPIRenderer, JSONPRenderer,JSONRenderer,XMLRenderer,YAMLRenderer
+from rest_framework.authentication import SessionAuthentication, TokenAuthentication
 
 #Login required mixin
 class LoginRequiredMixin(object):
@@ -41,7 +45,9 @@ class UserSerializer(serializers.Serializer):
     first_name = serializers.CharField(max_length=50)
     last_name = serializers.CharField(max_length=50)
 
-class UserProfile(LoginRequiredMixin,APIView):
+#LoginRequiredMixin,
+class UserProfile(APIView):
+    authentication_classes = (SessionAuthentication, TokenAuthentication)
     permission_classes = ( IsAuthenticated,)
     serializer_class = UserSerializer
     fields = ('username', 'first_name', 'last_name', 'email')
@@ -97,3 +103,51 @@ class IsOwnerOrReadOnly(permissions.BasePermission):
 
         # Write permissions are only allowed to the owner of the snippet.
         return obj.owner == request.user
+
+class fileDataUploadView(APIView):
+        permission_classes =(IsAuthenticated,)
+        #parser_classes = (MultiPartParser, FormParser,FileUploadParser,)
+        parser_classes = (FileUploadParser,)
+        renderer_classes = (JSONRenderer,)
+
+        def post(self, request, uploadDirectory="/data/file_upload",format=None):
+                #Get Token for task submission
+                #tok = Token.objects.get_or_create(user=self.request.user)
+                #headers = {'Authorization':'Token {0}'.format(str(tok[0])),'Content-Type':'application/json'} 
+                #check if uploadDirectory exists
+                if not os.path.isdir(uploadDirectory):
+                    os.makedirs(uploadDirectory)
+                result={} #'var':dir(request),'fpath':request.build_absolute_uri().split('/')}
+                local_file=""
+                #reader_id = request.DATA.get("reader_id")
+                #public_id=  request.DATA.get("myCheck")
+                #if public_id != '1':
+		#				public_id=False
+                #if public_id == '1':
+		#			public_id=True
+                #result={"reader_id":reader_id,"public_id":public_id}
+                #return Response(result)
+		results=[]
+                for key,value in request.FILES.iteritems():
+                        filename= value.name
+                        local_file = "%s/%s" % (uploadDirectory,filename)
+                        self.handle_file_upload(request.FILES[key],local_file)
+                        result[key]=local_file
+			results.append(result)
+                #Request task
+                #task_name = "etagq.tasks.tasks.etagDataUpload"
+                #payload={"function": task_name,"queue": "celery","args":[reader_id,local_file,str(tok[0]),public_id],"kwargs":{},"tags":[]}
+                #components = request.build_absolute_uri().split('/')
+                #hostname = os.environ.get("host_hostname", components[2])
+                #r=requests.post("{0}//{1}/api/queue/run/etagq.tasks.tasks.etagDataUpload/.json".format(components[0],hostname),data=json.dumps(payload),headers=headers)
+                return Response(results)
+
+
+        def handle_file_upload(self,f,filename):
+                if f.multiple_chunks():
+                        with open(filename, 'wb+') as temp_file:
+                                for chunk in f.chunks():
+                                        temp_file.write(chunk)
+                else:
+                        with open(filename, 'wb+') as temp_file:
+                                temp_file.write(f.read())
