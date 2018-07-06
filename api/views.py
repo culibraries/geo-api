@@ -141,7 +141,7 @@ class fileDataUploadView(APIView):
                     with open(filename, 'wb+') as temp_file:
                             temp_file.write(f.read())
 
-        def callback_task(request,local_file):
+        def callback_task(self,request,local_file):
             #Get Token for task submission
             tok = Token.objects.get_or_create(user=request.user)
             headers = {'Authorization':'Token {0}'.format(str(tok[0])),'Content-Type':'application/json'}
