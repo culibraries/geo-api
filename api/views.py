@@ -10,7 +10,7 @@ from rest_framework.permissions import IsAuthenticated
 #from .models import AuthtokenToken, AuthUser
 from django.contrib.auth.decorators import login_required
 from hashlib import md5
-import os,json
+import os,json,requests
 #from rest_framework import viewsets
 #from rest_framework.permissions import AllowAny
 #from .permissions import IsStaffOrTargetUser
