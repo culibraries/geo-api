@@ -10,7 +10,7 @@ from rest_framework.permissions import IsAuthenticated
 #from .models import AuthtokenToken, AuthUser
 from django.contrib.auth.decorators import login_required
 from hashlib import md5
-import os
+import os,json
 #from rest_framework import viewsets
 #from rest_framework.permissions import AllowAny
 #from .permissions import IsStaffOrTargetUser
@@ -110,47 +110,47 @@ class fileDataUploadView(APIView):
         parser_classes = (FileUploadParser,)
         renderer_classes = (JSONRenderer,)
 
-        def post(self, request, uploadDirectory="/data/file_upload",format=None,callback=None):
-                #Get Token for task submission
-                #tok = Token.objects.get_or_create(user=self.request.user)
-                #headers = {'Authorization':'Token {0}'.format(str(tok[0])),'Content-Type':'application/json'}
+        def post(self, request, uploadDirectory="/data/file_upload",format=None):
                 #check if uploadDirectory exists
                 if not os.path.isdir(uploadDirectory):
                     os.makedirs(uploadDirectory)
-                result={} #'var':dir(request),'fpath':request.build_absolute_uri().split('/')}
-                local_file=""
-                print("CALLBACK: ",callback)
-                callback = request.DATA.get("callback")
-                print("CALLBACK: ",callback)
-                #public_id=  request.DATA.get("myCheck")
-                #if public_id != '1':
-		        #				public_id=False
-                #if public_id == '1':
-		        #			public_id=True
-                #result={"reader_id":reader_id,"public_id":public_id}
-                #return Response(result)
                 results=[]
+                #upload files submitted
                 for key,value in request.FILES.iteritems():
-                        filename= value.name
-                        local_file = "%s/%s" % (uploadDirectory,filename)
-                        self.handle_file_upload(request.FILES[key],local_file)
-                        result[key]=local_file
-                        result['callback']=callback
-                        results.append(result)
-                #Request task
-                #task_name = "etagq.tasks.tasks.etagDataUpload"
-                #payload={"function": task_name,"queue": "celery","args":[reader_id,local_file,str(tok[0]),public_id],"kwargs":{},"tags":[]}
-                #components = request.build_absolute_uri().split('/')
-                #hostname = os.environ.get("host_hostname", components[2])
-                #r=requests.post("{0}//{1}/api/queue/run/etagq.tasks.tasks.etagDataUpload/.json".format(components[0],hostname),data=json.dumps(payload),headers=headers)
+                    result={}
+                    filename= value.name
+                    local_file = "{0}/{1}".format(uploadDirectory,filename)
+                    self.handle_file_upload(request.FILES[key],local_file)
+                    result[key]=local_file
+                    if request.DATA.get("callback",None):
+                        req = self.callback_task(request,local_file)
+                        try:
+                            result['callback']={"status":req.status_code,"response":req.json()}
+                        except:
+                            result['callback']={"status":req.status_code,"response":req.text}
+                    results.append(result)
                 return Response(results)
 
 
         def handle_file_upload(self,f,filename):
-                if f.multiple_chunks():
-                        with open(filename, 'wb+') as temp_file:
-                                for chunk in f.chunks():
-                                        temp_file.write(chunk)
-                else:
-                        with open(filename, 'wb+') as temp_file:
-                                temp_file.write(f.read())
+            if f.multiple_chunks():
+                    with open(filename, 'wb+') as temp_file:
+                            for chunk in f.chunks():
+                                    temp_file.write(chunk)
+            else:
+                    with open(filename, 'wb+') as temp_file:
+                            temp_file.write(f.read())
+
+        def callback_task(request,local_file):
+            #Get Token for task submission
+            tok = Token.objects.get_or_create(user=request.user)
+            headers = {'Authorization':'Token {0}'.format(str(tok[0])),'Content-Type':'application/json'}
+            queue = request.DATA.get("queue","celery")
+            tags = request.DATA.get("tags",'') # tags is a comma separated string; Converted to list
+            tags= tags.split(',')
+            taskname = request.DATA.get("callback")
+            payload={"function": taskname,"queue": queue,"args":[local_file,request.DATA],"kwargs":{},"tags":tags}
+            components = request.build_absolute_uri().split('/')
+            hostname = os.environ.get("api_hostname", components[2])
+            url = "{0}//{1}/api/queue/run/{2}/.json".format(components[0],hostname,taskname)
+            return requests.post(url,data=json.dumps(payload),headers=headers)
